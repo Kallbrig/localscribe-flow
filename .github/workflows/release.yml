@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  package-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Verify tag matches package version
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pyproject.toml -Pattern '^version = "(.+)"$').Matches.Groups[1].Value
+          if ("v$version" -ne "${{ github.ref_name }}") { throw "Tag and package version differ" }
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[app,dev]" cyclonedx-bom
+          python -m pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+      - run: ./scripts/build.ps1 -SkipInstall
+        shell: pwsh
+      - name: Build installer
+        run: choco install innosetup --no-progress -y; iscc packaging/installer.iss
+        shell: pwsh
+      - name: Generate installer checksum and SBOM
+        shell: pwsh
+        run: |
+          Get-ChildItem release/*Setup.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
+          }
+          cyclonedx-py environment --output-format JSON --output-file release/sbom.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: release/*
+          if-no-files-found: error
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release/*
+          fail_on_unmatched_files: true
+
