@@ -12,7 +12,7 @@ for package in ("faster_whisper", "ctranslate2", "tokenizers", "llama_cpp", "hug
     hiddenimports += h
 
 a = Analysis(
-    [str(project_root / "src" / "localscribe" / "app.py")],
+    [str(project_root / "packaging" / "launcher.py")],
     pathex=[str(project_root / "src")],
     binaries=binaries,
     datas=datas,

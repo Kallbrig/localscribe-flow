@@ -1,5 +1,5 @@
 #define MyAppName "LocalScribe Flow"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.1"
 #define MyAppPublisher "LocalScribe Flow contributors"
 #define MyAppExeName "LocalScribe Flow.exe"
 
@@ -31,4 +31,3 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
-

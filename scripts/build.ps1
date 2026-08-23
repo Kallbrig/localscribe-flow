@@ -16,12 +16,24 @@ if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
 & $PythonExecutable -m PyInstaller packaging/LocalScribeFlow.spec --noconfirm --clean
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed" }
 $Executable = Join-Path $ProjectRoot "dist\LocalScribe Flow\LocalScribe Flow.exe"
+$DiagnosticMarker = Join-Path $ProjectRoot "build\package-smoke.ok"
+Remove-Item -LiteralPath $DiagnosticMarker -Force -ErrorAction SilentlyContinue
 $env:LOCALSCRIBE_DIAGNOSTIC = "1"
-$SmokeProcess = Start-Process -FilePath $Executable -PassThru -WindowStyle Hidden
-Start-Sleep -Seconds 4
-if ($SmokeProcess.HasExited) { throw "Packaged application failed its startup smoke test" }
-Stop-Process -Id $SmokeProcess.Id
-Remove-Item Env:\LOCALSCRIBE_DIAGNOSTIC
+$env:LOCALSCRIBE_DIAGNOSTIC_FILE = $DiagnosticMarker
+try {
+    $SmokeProcess = Start-Process -FilePath $Executable -PassThru -WindowStyle Hidden
+    if (-not $SmokeProcess.WaitForExit(15000)) {
+        Stop-Process -Id $SmokeProcess.Id -Force
+        throw "Packaged application did not finish its diagnostic startup check"
+    }
+    if ($SmokeProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $DiagnosticMarker)) {
+        throw "Packaged application failed its diagnostic startup check"
+    }
+}
+finally {
+    Remove-Item Env:\LOCALSCRIBE_DIAGNOSTIC -ErrorAction SilentlyContinue
+    Remove-Item Env:\LOCALSCRIBE_DIAGNOSTIC_FILE -ErrorAction SilentlyContinue
+}
 $Version = & $PythonExecutable -c "import sys; sys.path.insert(0, 'src'); import localscribe; print(localscribe.__version__)"
 $ReleaseDirectory = Join-Path $ProjectRoot "release"
 New-Item -ItemType Directory -Force $ReleaseDirectory | Out-Null

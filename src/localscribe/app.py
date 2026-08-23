@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import os
 import sys
+from pathlib import Path
 
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from .config import ConfigStore
@@ -16,6 +19,14 @@ def main() -> int:
     app.setQuitOnLastWindowClosed(False)
     window = MainWindow(ConfigStore(), detect_hardware())
     window.show()
+    diagnostic_file = os.environ.get("LOCALSCRIBE_DIAGNOSTIC_FILE")
+    if diagnostic_file:
+
+        def diagnostic_success() -> None:
+            Path(diagnostic_file).write_text("ok\n", encoding="utf-8")
+            app.quit()
+
+        QTimer.singleShot(250, diagnostic_success)
     return app.exec()
 
 

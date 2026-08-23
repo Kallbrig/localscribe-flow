@@ -4,7 +4,7 @@ LocalScribe Flow is a private, local-first voice dictation app for Windows. Hold
 hotkey, speak, release by pressing it again, and polished text is copied and pasted into the
 active application. Audio transcription and language cleanup run on your computer.
 
-> Beta (`v0.1.0`): Windows 10/11 x64 is the supported release target. The core and desktop
+> Beta (`v0.1.1`): Windows 10/11 x64 is the supported release target. The core and desktop
 > integration boundaries are portable; macOS and Android adapters are planned.
 
 ## What it does
