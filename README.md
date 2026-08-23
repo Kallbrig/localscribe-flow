@@ -50,7 +50,9 @@ Always review consequential medical, legal, financial, or business text before s
 ## Hardware selection
 
 At startup the app queries CTranslate2. NVIDIA CUDA with FP16 is preferred when supported;
-otherwise it uses CPU INT8 or INT8/FP32 based on available memory. Machines below 8 GB RAM
+the required CUDA 12 runtime libraries are load-tested before GPU mode is enabled. If they are
+missing, the app safely falls back to CPU INT8 or INT8/FP32 based on available memory instead of
+failing during transcription. Machines below 8 GB RAM
 use a 0.5B cleanup model and `base.en` can be selected manually. The settings screen displays
 the active backend and rationale.
 

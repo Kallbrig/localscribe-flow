@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any, cast
 
 from .domain import CleanupMode
 
@@ -42,7 +43,7 @@ class RuleBasedCleaner:
 
 class LlamaCppCleaner:
     def __init__(self, model_path: Path, threads: int, gpu_layers: int = 0) -> None:
-        from llama_cpp import Llama  # type: ignore[import-not-found]
+        from llama_cpp import Llama
 
         self._llm = Llama(
             model_path=str(model_path),
@@ -54,20 +55,23 @@ class LlamaCppCleaner:
 
     def clean(self, text: str, mode: CleanupMode, vocabulary: list[str]) -> str:
         vocab = ", ".join(vocabulary) or "none"
-        result = self._llm.create_chat_completion(
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a private dictation editor. Return only edited text. "
-                        "Never add facts. "
-                        f"{PROMPTS[mode]} Preserve these exact terms when present: {vocab}."
-                    ),
-                },
-                {"role": "user", "content": text},
-            ],
-            max_tokens=512,
-            temperature=0.1,
+        result = cast(
+            dict[str, Any],
+            self._llm.create_chat_completion(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a private dictation editor. Return only edited text. "
+                            "Never add facts. "
+                            f"{PROMPTS[mode]} Preserve these exact terms when present: {vocab}."
+                        ),
+                    },
+                    {"role": "user", "content": text},
+                ],
+                max_tokens=512,
+                temperature=0.1,
+            ),
         )
         output = str(result["choices"][0]["message"]["content"]).strip()
         return _restore_words(output or text, vocabulary)

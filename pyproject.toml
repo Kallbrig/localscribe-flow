@@ -80,3 +80,7 @@ exclude = ["src/localscribe/ui.py", "src/localscribe/app.py"]
 [[tool.mypy.overrides]]
 module = ["numpy", "numpy.*"]
 follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["ctranslate2", "ctranslate2.*", "huggingface_hub", "huggingface_hub.*", "llama_cpp", "llama_cpp.*"]
+ignore_missing_imports = true

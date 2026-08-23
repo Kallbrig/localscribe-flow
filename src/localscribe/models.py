@@ -23,7 +23,7 @@ def recommended_cleanup_size(hardware: HardwareProfile) -> str:
 
 def ensure_cleanup_model(hardware: HardwareProfile) -> Path:
     """Download once into app data; inference is entirely local after that."""
-    from huggingface_hub import hf_hub_download  # type: ignore[import-not-found]
+    from huggingface_hub import hf_hub_download
 
     size = recommended_cleanup_size(hardware)
     repository, filename = MODEL_OPTIONS[size]
