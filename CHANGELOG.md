@@ -2,6 +2,17 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.6] - 2026-08-23
+
+### Fixed
+
+- Treat dictated questions as quoted text to edit, never prompts to answer.
+- Add explicit non-conversational examples and perspective/intent preservation constraints to the
+  cleanup system prompt.
+- Reject LLM output that introduces substantial new vocabulary, drops questions, or expands the
+  transcript suspiciously; fall back to deterministic cleanup instead.
+- Add the reported Kentucky sentence to unit tests and real llama.cpp release inference.
+
 ## [0.1.5] - 2026-08-23
 
 ### Fixed

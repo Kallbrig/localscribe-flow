@@ -50,6 +50,11 @@ def main() -> None:
         assert cleaner.backend == "llama.cpp"
         cleaned = cleaner.clean("um hello from localscribe", CleanupMode.STANDARD, ["LocalScribe"])
         assert cleaned.strip()
+        question = "Hi, how are you? How's it been going over there in Kentucky?"
+        question_cleaned = cleaner.clean(question, CleanupMode.STANDARD, [])
+        assert "I'm fine" not in question_cleaned
+        assert "interesting" not in question_cleaned
+        assert question_cleaned.count("?") == question.count("?")
         print("Real speech and cleanup model downloads, initialization, and inference passed.")
 
 

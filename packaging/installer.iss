@@ -1,5 +1,5 @@
 #define MyAppName "LocalScribe Flow"
-#define MyAppVersion "0.1.5"
+#define MyAppVersion "0.1.6"
 #define MyAppPublisher "LocalScribe Flow contributors"
 #define MyAppExeName "LocalScribe Flow.exe"
 
