@@ -28,7 +28,7 @@ def release(version: str, digest: str) -> bytes:
         "html_url": f"https://github.com/example/releases/tag/v{version}",
         "assets": [
             {
-                "name": f"LocalScribe-Flow-{version}-Setup.exe",
+                "name": f"LocalScribe-{version}-Setup.exe",
                 "digest": f"sha256:{digest}",
                 "browser_download_url": "https://github.com/example/installer.exe",
             }
@@ -60,7 +60,7 @@ def test_download_update_verifies_sha256(monkeypatch: pytest.MonkeyPatch, tmp_pa
     available = AvailableUpdate(
         "1.2.0",
         "https://github.com/example/installer.exe",
-        "LocalScribe-Flow-1.2.0-Setup.exe",
+        "LocalScribe-1.2.0-Setup.exe",
         digest,
         "https://github.com/example/releases/tag/v1.2.0",
     )

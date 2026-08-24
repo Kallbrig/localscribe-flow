@@ -7,6 +7,7 @@ from pathlib import Path
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
+from . import APP_NAME
 from .config import ConfigStore
 from .hardware import detect_hardware
 from .ui import MainWindow
@@ -14,7 +15,7 @@ from .ui import MainWindow
 
 def main() -> int:
     app = QApplication(sys.argv)
-    app.setApplicationName("LocalScribe Flow")
+    app.setApplicationName(APP_NAME)
     app.setOrganizationName("LocalScribe")
     app.setQuitOnLastWindowClosed(False)
     window = MainWindow(ConfigStore(), detect_hardware())

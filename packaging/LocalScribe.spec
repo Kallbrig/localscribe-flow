@@ -22,8 +22,8 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 exe = EXE(
-    pyz, a.scripts, [], exclude_binaries=True, name="LocalScribe Flow",
+    pyz, a.scripts, [], exclude_binaries=True, name="LocalScribe",
     debug=False, bootloader_ignore_signals=False, strip=False, upx=True,
     console=False, icon=None,
 )
-coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=True, name="LocalScribe Flow")
+coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=True, name="LocalScribe")

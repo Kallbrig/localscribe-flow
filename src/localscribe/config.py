@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from platformdirs import user_config_dir, user_data_dir
 
+from . import APP_NAME, LEGACY_APP_NAME
 from .domain import CleanupMode
 
 
@@ -28,7 +30,9 @@ class AppConfig:
 
 class ConfigStore:
     def __init__(self, path: Path | None = None) -> None:
-        self.path = path or Path(user_config_dir("LocalScribe Flow")) / "config.json"
+        if path is None:
+            _migrate_legacy_storage()
+        self.path = path or Path(user_config_dir(APP_NAME)) / "config.json"
 
     def load(self) -> AppConfig:
         if not self.path.exists():
@@ -52,6 +56,24 @@ class ConfigStore:
 
 def data_directory() -> Path:
     override = os.environ.get("LOCALSCRIBE_DATA_DIR")
-    path = Path(override) if override else Path(user_data_dir("LocalScribe Flow"))
+    if not override:
+        _migrate_legacy_storage()
+    path = Path(override) if override else Path(user_data_dir(APP_NAME))
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _migrate_legacy_storage() -> None:
+    locations = {
+        (Path(user_config_dir(LEGACY_APP_NAME)), Path(user_config_dir(APP_NAME))),
+        (Path(user_data_dir(LEGACY_APP_NAME)), Path(user_data_dir(APP_NAME))),
+    }
+    for legacy, current in locations:
+        if legacy == current or current.exists() or not legacy.exists():
+            continue
+        current.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            legacy.replace(current)
+        except OSError:
+            # Cross-volume or locked-directory fallback. Keep the legacy copy if cleanup fails.
+            shutil.copytree(legacy, current, dirs_exist_ok=True)

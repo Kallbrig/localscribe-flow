@@ -3,13 +3,13 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "localscribe-flow"
-version = "0.1.8"
+name = "localscribe"
+version = "0.1.9"
 description = "Private, local-first voice dictation and cleanup for Windows"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = "MIT"
-authors = [{name = "LocalScribe Flow contributors"}]
+authors = [{name = "LocalScribe contributors"}]
 keywords = ["whisper", "dictation", "speech-to-text", "offline", "local-llm"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -47,7 +47,6 @@ dev = [
 
 [project.scripts]
 localscribe = "localscribe.cli:main"
-localscribe-flow = "localscribe.app:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/localscribe"]

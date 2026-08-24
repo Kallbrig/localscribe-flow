@@ -50,6 +50,7 @@ def make_window(monkeypatch: object, tmp_path: Path) -> MainWindow:
 def test_recording_is_locked_while_speech_model_loads(monkeypatch: object, tmp_path: Path) -> None:
     window = make_window(monkeypatch, tmp_path)
 
+    assert window.windowTitle() == "LocalScribe"
     assert not window.record.isEnabled()
     assert window.record.text() == "Preparing speech model…"
     assert not window.model_progress.isHidden()
@@ -106,7 +107,7 @@ def test_completion_notification_can_be_enabled(monkeypatch: object, tmp_path: P
 
     window._on_complete(Transcript("hello", "Hello.", "en", 1.0, CleanupMode.STANDARD))
 
-    assert tray.messages == [("LocalScribe Flow", "Transcription copied to clipboard")]
+    assert tray.messages == [("LocalScribe", "Transcription copied to clipboard")]
 
 
 def test_completion_notification_setting_is_persisted(monkeypatch: object, tmp_path: Path) -> None:

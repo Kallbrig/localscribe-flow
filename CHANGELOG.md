@@ -2,6 +2,14 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.9] - 2026-08-23
+
+### Changed
+
+- Rename the application, executable, installer, shortcuts, and release assets to LocalScribe.
+- Migrate existing LocalScribe Flow settings, models, and transcript history to the renamed local
+  data directory during upgrade.
+
 ## [0.1.8] - 2026-08-23
 
 ### Changed

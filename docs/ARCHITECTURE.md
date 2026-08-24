@@ -1,6 +1,6 @@
 # Architecture
 
-LocalScribe Flow separates its domain pipeline from platform and engine adapters:
+LocalScribe separates its domain pipeline from platform and engine adapters:
 
 ```text
 Global hotkey -> AudioRecorder -> WhisperTranscriber -> AutoCleaner -> clipboard/paste
@@ -32,4 +32,3 @@ a missing model during setup.
   JNI with an IME or accessibility-service front end. Settings remain schema-compatible.
 - **Engines:** additional speech and cleanup engines implement the two small protocols in
   `domain.py`, which makes them independently testable.
-

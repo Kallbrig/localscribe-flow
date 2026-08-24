@@ -1,3 +1,5 @@
-"""LocalScribe Flow: private, local-first dictation."""
+"""LocalScribe: private, local-first dictation."""
 
-__version__ = "0.1.8"
+APP_NAME = "LocalScribe"
+LEGACY_APP_NAME = "LocalScribe Flow"
+__version__ = "0.1.9"

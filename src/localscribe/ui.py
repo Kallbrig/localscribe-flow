@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import __version__
+from . import APP_NAME, __version__
 from .audio import AudioRecorder
 from .cleanup import AutoCleaner
 from .config import ConfigStore, data_directory
@@ -98,12 +98,12 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(5000, self._auto_check_for_updates)
 
     def _build_ui(self) -> None:
-        self.setWindowTitle("LocalScribe Flow")
+        self.setWindowTitle(APP_NAME)
         self.setWindowIcon(app_icon())
         self.resize(720, 570)
         root = QWidget()
         layout = QVBoxLayout(root)
-        title = QLabel("LocalScribe Flow")
+        title = QLabel(APP_NAME)
         title.setStyleSheet("font-size: 28px; font-weight: 700; color: #22d3ee")
         layout.addWidget(title)
         layout.addWidget(
@@ -220,7 +220,7 @@ class MainWindow(QMainWindow):
     def _build_tray(self) -> None:
         self.tray = QSystemTrayIcon(app_icon(), self)
         menu = self.tray.contextMenu() or QMenu()
-        show = QAction("Open LocalScribe Flow", self)
+        show = QAction(f"Open {APP_NAME}", self)
         show.triggered.connect(self.show)
         toggle = QAction("Start / stop recording", self)
         toggle.triggered.connect(self.toggle_recording)
@@ -339,13 +339,13 @@ class MainWindow(QMainWindow):
             with contextlib.suppress(Exception):
                 self.integration.paste_text(result.cleaned)
         if self.config.notify_on_complete:
-            self.tray.showMessage("LocalScribe Flow", "Transcription copied to clipboard")
+            self.tray.showMessage(APP_NAME, "Transcription copied to clipboard")
 
     def _on_failed(self, message: str) -> None:
         self.record.setEnabled(True)
         self.record.setText("Start recording")
         self.status.setText(message)
-        QMessageBox.warning(self, "LocalScribe Flow", message)
+        QMessageBox.warning(self, APP_NAME, message)
 
     def _set_status(self, message: str) -> None:
         self.status.setText(message)
@@ -442,9 +442,9 @@ class MainWindow(QMainWindow):
         self.update_status.setText(f"Version {update.version} is downloaded and verified.")
         answer = QMessageBox.question(
             self,
-            "LocalScribe Flow update ready",
+            f"{APP_NAME} update ready",
             f"Version {update.version} has been downloaded and verified. Install it now? "
-            "LocalScribe Flow will close before the installer opens.",
+            f"{APP_NAME} will close before the installer opens.",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes,
         )
@@ -503,4 +503,4 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: object) -> None:
         event.ignore()
         self.hide()
-        self.tray.showMessage("LocalScribe Flow", "Still running in the system tray")
+        self.tray.showMessage(APP_NAME, "Still running in the system tray")

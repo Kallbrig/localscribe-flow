@@ -45,7 +45,7 @@ def _request(url: str) -> Any:
         url,
         headers={
             "Accept": "application/vnd.github+json",
-            "User-Agent": "LocalScribe-Flow-Updater",
+            "User-Agent": "LocalScribe-Updater",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )

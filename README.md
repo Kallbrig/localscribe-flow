@@ -1,10 +1,10 @@
-# LocalScribe Flow
+# LocalScribe
 
-LocalScribe Flow is a private, local-first voice dictation app for Windows. Hold a global
+LocalScribe is a private, local-first voice dictation app for Windows. Hold a global
 hotkey, speak, release by pressing it again, and polished text is copied and pasted into the
 active application. Audio transcription and language cleanup run on your computer.
 
-> Beta (`v0.1.8`): Windows 10/11 x64 is the supported release target. The core and desktop
+> Beta (`v0.1.9`): Windows 10/11 x64 is the supported release target. The core and desktop
 > integration boundaries are portable; macOS and Android adapters are planned.
 
 ## What it does
@@ -25,9 +25,10 @@ active application. Audio transcription and language cleanup run on your compute
 Download the installer or portable ZIP from the latest GitHub release. The first launch
 downloads two model files: Whisper `small.en` and Qwen 2.5 0.5B/1.5B Q4 (selected according
 to RAM). After that, dictation works without a network connection. Model files live under
-`%LOCALAPPDATA%\LocalScribe Flow` and never receive your recordings or text.
+`%LOCALAPPDATA%\LocalScribe` and never receive your recordings or text. Existing installations
+migrate their settings, downloaded models, and transcript history automatically.
 
-1. Launch **LocalScribe Flow** and allow microphone access if Windows asks.
+1. Launch **LocalScribe** and allow microphone access if Windows asks.
 2. Wait for the status to say **Ready**. First setup can take several minutes.
 3. Focus any text field and press `Ctrl+Shift+Space`.
 4. Speak, then press the same hotkey. The cleaned text is pasted into the focused field.
@@ -67,7 +68,7 @@ py -3.11 -m venv .venv
 python -m pip install -e ".[app,dev]"
 python -m pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 pytest
-localscribe-flow
+python -m localscribe.app
 ```
 
 Transcribe a file from the command line:

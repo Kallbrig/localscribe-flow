@@ -19,9 +19,9 @@ if ($LASTEXITCODE -ne 0) { throw "Format check failed" }
 if ($LASTEXITCODE -ne 0) { throw "Type check failed" }
 & $PythonExecutable -m pytest
 if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
-& $PythonExecutable -m PyInstaller packaging/LocalScribeFlow.spec --noconfirm --clean
+& $PythonExecutable -m PyInstaller packaging/LocalScribe.spec --noconfirm --clean
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed" }
-$Executable = Join-Path $ProjectRoot "dist\LocalScribe Flow\LocalScribe Flow.exe"
+$Executable = Join-Path $ProjectRoot "dist\LocalScribe\LocalScribe.exe"
 $DiagnosticMarker = Join-Path $ProjectRoot "build\package-smoke.ok"
 Remove-Item -LiteralPath $DiagnosticMarker -Force -ErrorAction SilentlyContinue
 $env:LOCALSCRIBE_DIAGNOSTIC = "1"
@@ -48,8 +48,8 @@ finally {
 $Version = & $PythonExecutable -c "import sys; sys.path.insert(0, 'src'); import localscribe; print(localscribe.__version__)"
 $ReleaseDirectory = Join-Path $ProjectRoot "release"
 New-Item -ItemType Directory -Force $ReleaseDirectory | Out-Null
-$Archive = Join-Path $ReleaseDirectory "LocalScribe-Flow-$Version-windows-x64.zip"
-Compress-Archive -Path "dist/LocalScribe Flow/*" -DestinationPath $Archive -Force
+$Archive = Join-Path $ReleaseDirectory "LocalScribe-$Version-windows-x64.zip"
+Compress-Archive -Path "dist/LocalScribe/*" -DestinationPath $Archive -Force
 Get-FileHash $Archive -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path -Leaf $Archive)" } |
     Set-Content -Encoding ascii "$Archive.sha256"
 Write-Host "Built $Archive"

@@ -103,7 +103,7 @@ def _open_model_download(repository: str, filename: str, start: int) -> Any:
     encoded_repository = quote(repository, safe="/")
     encoded_filename = quote(filename, safe="")
     url = f"https://huggingface.co/{encoded_repository}/resolve/main/{encoded_filename}"
-    headers = {"User-Agent": "LocalScribe-Flow-Model-Downloader"}
+    headers = {"User-Agent": "LocalScribe-Model-Downloader"}
     if start:
         headers["Range"] = f"bytes={start}-"
     request = urllib.request.Request(url, headers=headers)
