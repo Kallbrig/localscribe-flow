@@ -5,10 +5,11 @@ import os
 import threading
 import time
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QHBoxLayout,
@@ -25,6 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import __version__
 from .audio import AudioRecorder
 from .cleanup import AutoCleaner
 from .config import ConfigStore, data_directory
@@ -33,6 +35,7 @@ from .models import ensure_cleanup_model
 from .pipeline import DictationPipeline
 from .platforms import DesktopIntegration
 from .transcription import WhisperTranscriber
+from .updater import DownloadedUpdate, download_update, find_update
 
 
 class Events(QObject):
@@ -40,6 +43,10 @@ class Events(QObject):
     complete = Signal(object)
     failed = Signal(str)
     status = Signal(str)
+    models_ready = Signal(object, str)
+    startup_failed = Signal(str)
+    update_ready = Signal(object)
+    update_status = Signal(str, bool)
 
 
 def app_icon() -> QIcon:
@@ -68,6 +75,11 @@ class MainWindow(QMainWindow):
         self.events.complete.connect(self._on_complete)
         self.events.failed.connect(self._on_failed)
         self.events.status.connect(self._set_status)
+        self.events.models_ready.connect(self._on_models_ready)
+        self.events.startup_failed.connect(self._on_startup_failed)
+        self.events.update_ready.connect(self._on_update_ready)
+        self.events.update_status.connect(self._set_update_status)
+        self._checking_updates = False
         self._build_ui()
         self._build_tray()
         self._register_hotkey()
@@ -75,6 +87,7 @@ class MainWindow(QMainWindow):
             self.events.status.emit("Diagnostic mode · UI and native dependencies loaded")
         else:
             threading.Thread(target=self._load_models, daemon=True).start()
+            QTimer.singleShot(5000, self._auto_check_for_updates)
 
     def _build_ui(self) -> None:
         self.setWindowTitle("LocalScribe Flow")
@@ -97,6 +110,8 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout()
         self.record = QPushButton("Start recording")
         self.record.setMinimumHeight(55)
+        self.record.setEnabled(False)
+        self.record.setText("Preparing speech model…")
         self.record.clicked.connect(self.toggle_recording)
         row.addWidget(self.record)
         self.mode = QComboBox()
@@ -105,6 +120,10 @@ class MainWindow(QMainWindow):
         self.mode.currentTextChanged.connect(self._save_settings)
         row.addWidget(self.mode)
         home_layout.addLayout(row)
+        self.retry = QPushButton("Retry model setup")
+        self.retry.clicked.connect(self._retry_model_setup)
+        self.retry.hide()
+        home_layout.addWidget(self.retry)
         self.output = QTextEdit()
         self.output.setPlaceholderText("Your latest transcription appears here…")
         home_layout.addWidget(self.output)
@@ -130,6 +149,16 @@ class MainWindow(QMainWindow):
         self.words.setPlaceholderText("One custom name or technical term per line")
         self.words.textChanged.connect(self._save_settings)
         form.addRow("Custom words", self.words)
+        self.auto_updates = QCheckBox("Check for updates automatically")
+        self.auto_updates.setChecked(self.config.auto_check_updates)
+        self.auto_updates.toggled.connect(self._save_settings)
+        form.addRow("Updates", self.auto_updates)
+        self.check_updates = QPushButton("Check for updates now")
+        self.check_updates.clicked.connect(lambda: self._start_update_check(manual=True))
+        form.addRow("", self.check_updates)
+        self.update_status = QLabel(f"Installed version: {__version__}")
+        self.update_status.setWordWrap(True)
+        form.addRow("", self.update_status)
         hardware_text = (
             f"{self.hardware.accelerator or 'CPU'} · {self.hardware.logical_cores} threads · "
             f"{self.hardware.memory_gb} GB RAM\n"
@@ -171,30 +200,40 @@ class MainWindow(QMainWindow):
     def _load_models(self) -> None:
         try:
             self.events.status.emit(
-                "Loading Whisper locally (first launch may download the model)…"
+                "Preparing the private speech model… First launch may take several minutes "
+                "while it downloads once."
             )
             transcriber = WhisperTranscriber(
                 self.config.whisper_model,
                 self.hardware,
                 self.config.language,
             )
-            llm_path = self.config.llm_model_path
-            if not llm_path:
-                self.events.status.emit("Preparing the private cleanup model (one-time download)…")
-                llm_path = str(ensure_cleanup_model(self.hardware))
+        except Exception as exc:  # model libraries surface backend-specific exceptions
+            self.events.startup_failed.emit(f"Speech model setup failed: {exc}")
+            return
+
+        fallback = AutoCleaner("", self.hardware.logical_cores - 1, False)
+        self.events.models_ready.emit(
+            DictationPipeline(transcriber, fallback),
+            f"Ready to dictate · {self.hardware.device}/{self.hardware.compute_type} · "
+            "enhanced cleanup is preparing in the background",
+        )
+
+        try:
+            llm_path = self.config.llm_model_path or str(ensure_cleanup_model(self.hardware))
             cleaner = AutoCleaner(
-                llm_path,
-                self.hardware.logical_cores - 1,
-                self.hardware.device == "cuda",
+                llm_path, self.hardware.logical_cores - 1, self.hardware.device == "cuda"
             )
-            self.pipeline = DictationPipeline(transcriber, cleaner)
-            self.events.status.emit(
+            self.events.models_ready.emit(
+                DictationPipeline(transcriber, cleaner),
                 f"Ready · {self.hardware.device}/{self.hardware.compute_type} · "
                 f"cleanup: {cleaner.backend} · "
-                f"hotkey: {self.config.hotkey}"
+                f"hotkey: {self.config.hotkey}",
             )
-        except Exception as exc:  # model libraries surface several backend-specific exceptions
-            self.events.failed.emit(f"Engine startup failed: {exc}")
+        except Exception as exc:  # cleanup is optional; dictation remains available
+            self.events.status.emit(
+                f"Ready · basic local cleanup active · enhanced cleanup setup failed: {exc}"
+            )
 
     def toggle_recording(self) -> None:
         if self.recorder.recording:
@@ -203,7 +242,7 @@ class MainWindow(QMainWindow):
             threading.Thread(target=self._finish_recording, daemon=True).start()
             return
         if not self.pipeline:
-            self._on_failed("The local models are still loading.")
+            self._set_status("Preparing the speech model; recording will unlock when it is ready.")
             return
         try:
             self.recorder.start()
@@ -251,6 +290,91 @@ class MainWindow(QMainWindow):
     def _set_status(self, message: str) -> None:
         self.status.setText(message)
 
+    def _on_models_ready(self, pipeline: object, message: str) -> None:
+        assert isinstance(pipeline, DictationPipeline)
+        self.pipeline = pipeline
+        if not self.recorder.recording:
+            self.record.setEnabled(True)
+            self.record.setText("Start recording")
+        self.retry.hide()
+        self.status.setText(message)
+
+    def _on_startup_failed(self, message: str) -> None:
+        self.pipeline = None
+        self.record.setEnabled(False)
+        self.record.setText("Speech model unavailable")
+        self.retry.show()
+        self.status.setText(message)
+
+    def _retry_model_setup(self) -> None:
+        self.retry.hide()
+        self.record.setEnabled(False)
+        self.record.setText("Preparing speech model…")
+        threading.Thread(target=self._load_models, daemon=True).start()
+
+    def _auto_check_for_updates(self) -> None:
+        if self.config.auto_check_updates:
+            self._start_update_check(manual=False)
+
+    def _start_update_check(self, manual: bool) -> None:
+        if self._checking_updates:
+            if manual:
+                self.update_status.setText("An update check is already running.")
+            return
+        self._checking_updates = True
+        self.check_updates.setEnabled(False)
+        self.update_status.setText("Checking GitHub for updates…")
+        threading.Thread(
+            target=self._check_and_download_update, args=(manual,), daemon=True
+        ).start()
+
+    def _check_and_download_update(self, manual: bool) -> None:
+        try:
+            update = find_update(__version__)
+            if update is None:
+                message = (
+                    "You have the latest version."
+                    if manual
+                    else f"Version {__version__} is current."
+                )
+                self.events.update_status.emit(message, True)
+                return
+            self.events.update_status.emit(
+                f"Downloading version {update.version} securely…", False
+            )
+            downloaded = download_update(update, data_directory() / "updates")
+            self.events.update_ready.emit(downloaded)
+        except Exception as exc:
+            prefix = "Update check failed" if manual else "Automatic update check failed"
+            self.events.update_status.emit(f"{prefix}: {exc}", True)
+
+    def _set_update_status(self, message: str, finished: bool) -> None:
+        if finished:
+            self._checking_updates = False
+            self.check_updates.setEnabled(True)
+        self.update_status.setText(message)
+
+    def _on_update_ready(self, update: object) -> None:
+        assert isinstance(update, DownloadedUpdate)
+        self._checking_updates = False
+        self.check_updates.setEnabled(True)
+        self.update_status.setText(f"Version {update.version} is downloaded and verified.")
+        answer = QMessageBox.question(
+            self,
+            "LocalScribe Flow update ready",
+            f"Version {update.version} has been downloaded and verified. Install it now? "
+            "LocalScribe Flow will close before the installer opens.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes,
+        )
+        if answer == QMessageBox.Yes:
+            launch_result = QProcess.startDetached(str(update.installer_path), [])
+            launched = launch_result[0] if isinstance(launch_result, tuple) else launch_result
+            if launched:
+                QApplication.quit()
+            else:
+                self._on_failed("The update installer could not be opened.")
+
     def _save_settings(self) -> None:
         self.config.mode = CleanupMode(self.mode.currentText().lower())
         self.config.whisper_model = self.model.text().strip() or "small.en"
@@ -258,6 +382,7 @@ class MainWindow(QMainWindow):
         self.config.custom_words = [
             w.strip() for w in self.words.toPlainText().splitlines() if w.strip()
         ]
+        self.config.auto_check_updates = self.auto_updates.isChecked()
         self.store.save(self.config)
 
     def _hotkey_changed(self) -> None:

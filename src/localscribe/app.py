@@ -23,7 +23,12 @@ def main() -> int:
     if diagnostic_file:
 
         def diagnostic_success() -> None:
-            Path(diagnostic_file).write_text("ok\n", encoding="utf-8")
+            startup_controls_are_safe = (
+                not window.record.isEnabled()
+                and window.record.text() == "Preparing speech model…"
+            )
+            result = "ok\n" if startup_controls_are_safe else "invalid startup state\n"
+            Path(diagnostic_file).write_text(result, encoding="utf-8")
             app.quit()
 
         QTimer.singleShot(250, diagnostic_success)

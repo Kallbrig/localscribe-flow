@@ -2,6 +2,18 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.2] - 2026-08-23
+
+### Fixed
+
+- Lock recording until the speech model is ready instead of showing a misleading modal during
+  first-run setup.
+- Enable dictation with basic local cleanup as soon as Whisper loads while enhanced cleanup
+  continues preparing in the background.
+- Show persistent model setup failures with an in-app retry action.
+- Verify the safe initial model-loading controls in the packaged startup check.
+- Add configurable automatic update checks, verified background downloads, and an install prompt.
+
 ## [0.1.1] - 2026-08-23
 
 ### Fixed

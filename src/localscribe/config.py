@@ -20,6 +20,7 @@ class AppConfig:
     custom_words: list[str] = field(default_factory=list)
     paste_after_transcription: bool = True
     keep_recordings: bool = False
+    auto_check_updates: bool = True
 
 
 class ConfigStore:

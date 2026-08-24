@@ -26,7 +26,12 @@ try {
         Stop-Process -Id $SmokeProcess.Id -Force
         throw "Packaged application did not finish its diagnostic startup check"
     }
-    if ($SmokeProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $DiagnosticMarker)) {
+    $DiagnosticResult = if (Test-Path -LiteralPath $DiagnosticMarker) {
+        (Get-Content -LiteralPath $DiagnosticMarker -Raw).Trim()
+    } else {
+        "missing"
+    }
+    if ($SmokeProcess.ExitCode -ne 0 -or $DiagnosticResult -ne "ok") {
         throw "Packaged application failed its diagnostic startup check"
     }
 }
