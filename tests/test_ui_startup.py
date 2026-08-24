@@ -19,6 +19,22 @@ class StubCleaner:
         return text
 
 
+class StubRecorder:
+    def __init__(self) -> None:
+        self.recording = False
+
+    def start(self) -> None:
+        self.recording = True
+
+
+class CapturingTray:
+    def __init__(self) -> None:
+        self.messages: list[tuple[str, str]] = []
+
+    def showMessage(self, title: str, message: str) -> None:
+        self.messages.append((title, message))
+
+
 def make_window(monkeypatch: object, tmp_path: Path) -> MainWindow:
     monkeypatch.setenv("LOCALSCRIBE_DIAGNOSTIC", "1")  # type: ignore[attr-defined]
     monkeypatch.setenv("LOCALSCRIBE_DATA_DIR", str(tmp_path / "data"))  # type: ignore[attr-defined]
@@ -56,6 +72,50 @@ def test_recording_unlocks_when_pipeline_is_ready(monkeypatch: object, tmp_path:
     assert window.record.isEnabled()
     assert window.record.text() == "Start recording"
     assert window.status.text() == "Ready"
+
+
+def test_starting_recording_never_shows_a_windows_notification(
+    monkeypatch: object, tmp_path: Path
+) -> None:
+    window = make_window(monkeypatch, tmp_path)
+    window.pipeline = DictationPipeline(StubTranscriber(), StubCleaner())
+    window.recorder = StubRecorder()  # type: ignore[assignment]
+    tray = CapturingTray()
+    window.tray = tray  # type: ignore[assignment]
+
+    window.toggle_recording()
+
+    assert tray.messages == []
+
+
+def test_completion_notification_is_silent_by_default(monkeypatch: object, tmp_path: Path) -> None:
+    window = make_window(monkeypatch, tmp_path)
+    tray = CapturingTray()
+    window.tray = tray  # type: ignore[assignment]
+
+    window._on_complete(Transcript("hello", "Hello.", "en", 1.0, CleanupMode.STANDARD))
+
+    assert tray.messages == []
+
+
+def test_completion_notification_can_be_enabled(monkeypatch: object, tmp_path: Path) -> None:
+    window = make_window(monkeypatch, tmp_path)
+    window.config.notify_on_complete = True  # type: ignore[attr-defined]
+    tray = CapturingTray()
+    window.tray = tray  # type: ignore[assignment]
+
+    window._on_complete(Transcript("hello", "Hello.", "en", 1.0, CleanupMode.STANDARD))
+
+    assert tray.messages == [("LocalScribe Flow", "Transcription copied to clipboard")]
+
+
+def test_completion_notification_setting_is_persisted(monkeypatch: object, tmp_path: Path) -> None:
+    config_path = tmp_path / "config.json"
+    window = make_window(monkeypatch, tmp_path)
+
+    window.notify_complete.setChecked(True)  # type: ignore[attr-defined]
+
+    assert ConfigStore(config_path).load().notify_on_complete is True  # type: ignore[attr-defined]
 
 
 def test_model_download_progress_is_visible(monkeypatch: object, tmp_path: Path) -> None:

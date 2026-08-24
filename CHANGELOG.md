@@ -2,6 +2,13 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.8] - 2026-08-23
+
+### Changed
+
+- Start recording silently without emitting a Windows notification.
+- Make transcription-complete Windows notifications optional and disabled by default.
+
 ## [0.1.7] - 2026-08-23
 
 ### Added

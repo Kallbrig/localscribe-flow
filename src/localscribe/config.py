@@ -23,6 +23,7 @@ class AppConfig:
     keep_recordings: bool = False
     auto_check_updates: bool = True
     save_history: bool = True
+    notify_on_complete: bool = False
 
 
 class ConfigStore:

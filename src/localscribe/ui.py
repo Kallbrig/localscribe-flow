@@ -190,6 +190,10 @@ class MainWindow(QMainWindow):
         self.save_history.setChecked(self.config.save_history)
         self.save_history.toggled.connect(self._save_settings)
         form.addRow("History", self.save_history)
+        self.notify_complete = QCheckBox("Show a Windows notification when transcription completes")
+        self.notify_complete.setChecked(self.config.notify_on_complete)
+        self.notify_complete.toggled.connect(self._save_settings)
+        form.addRow("Notifications", self.notify_complete)
         self.check_updates = QPushButton("Check for updates now")
         self.check_updates.clicked.connect(lambda: self._start_update_check(manual=True))
         form.addRow("", self.check_updates)
@@ -302,7 +306,6 @@ class MainWindow(QMainWindow):
             self.recorder.start()
             self.record.setText("Stop and transcribe")
             self.status.setText("Recording… press the hotkey again to finish")
-            self.tray.showMessage("LocalScribe Flow", "Recording started")
         except Exception as exc:
             self._on_failed(f"Microphone error: {exc}")
 
@@ -335,7 +338,8 @@ class MainWindow(QMainWindow):
         if self.config.paste_after_transcription:
             with contextlib.suppress(Exception):
                 self.integration.paste_text(result.cleaned)
-        self.tray.showMessage("LocalScribe Flow", "Transcription copied to clipboard")
+        if self.config.notify_on_complete:
+            self.tray.showMessage("LocalScribe Flow", "Transcription copied to clipboard")
 
     def _on_failed(self, message: str) -> None:
         self.record.setEnabled(True)
@@ -488,6 +492,7 @@ class MainWindow(QMainWindow):
         ]
         self.config.auto_check_updates = self.auto_updates.isChecked()
         self.config.save_history = self.save_history.isChecked()
+        self.config.notify_on_complete = self.notify_complete.isChecked()
         self.store.save(self.config)
 
     def _hotkey_changed(self) -> None:
