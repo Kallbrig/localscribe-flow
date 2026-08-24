@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -48,6 +49,7 @@ class ConfigStore:
 
 
 def data_directory() -> Path:
-    path = Path(user_data_dir("LocalScribe Flow"))
+    override = os.environ.get("LOCALSCRIBE_DATA_DIR")
+    path = Path(override) if override else Path(user_data_dir("LocalScribe Flow"))
     path.mkdir(parents=True, exist_ok=True)
     return path

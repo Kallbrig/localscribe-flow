@@ -24,8 +24,7 @@ def main() -> int:
 
         def diagnostic_success() -> None:
             startup_controls_are_safe = (
-                not window.record.isEnabled()
-                and window.record.text() == "Preparing speech model…"
+                not window.record.isEnabled() and window.record.text() == "Preparing speech model…"
             )
             result = "ok\n" if startup_controls_are_safe else "invalid startup state\n"
             Path(diagnostic_file).write_text(result, encoding="utf-8")

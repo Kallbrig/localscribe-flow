@@ -2,6 +2,18 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.4] - 2026-08-23
+
+### Fixed
+
+- Replace the hanging parallel Hugging Face snapshot path with sequential, resumable downloads.
+- Enforce connection and read timeouts, retry interrupted transfers three times, preserve partial
+  bytes for resume, verify payload sizes, and verify LFS SHA-256 digests.
+- Report aggregate byte/megabyte progress across every required model file in a readable full-height
+  progress bar.
+- Gate CI and releases on downloading real Whisper and GGUF models, loading them with CTranslate2
+  and llama.cpp, and running actual inference through both engines on Windows.
+
 ## [0.1.3] - 2026-08-23
 
 ### Fixed

@@ -113,6 +113,8 @@ class MainWindow(QMainWindow):
         self.status.setStyleSheet("padding: 10px; background: #1f2937; border-radius: 6px")
         home_layout.addWidget(self.status)
         self.model_progress = QProgressBar()
+        self.model_progress.setMinimumHeight(28)
+        self.model_progress.setTextVisible(True)
         self.model_progress.setRange(0, 0)
         self.model_progress.setFormat("Preparing local models…")
         home_layout.addWidget(self.model_progress)
@@ -347,7 +349,9 @@ class MainWindow(QMainWindow):
             percentage = min(100, round(current * 100 / total))
             self.model_progress.setRange(0, 100)
             self.model_progress.setValue(percentage)
-            self.model_progress.setFormat(f"{stage} · %p%")
+            downloaded_mb = current / (1024 * 1024)
+            total_mb = total / (1024 * 1024)
+            self.model_progress.setFormat(f"{stage} · {downloaded_mb:.1f}/{total_mb:.1f} MB · %p%")
         else:
             self.model_progress.setRange(0, 0)
             self.model_progress.setFormat(f"{stage}…")
@@ -385,9 +389,7 @@ class MainWindow(QMainWindow):
                 )
                 self.events.update_status.emit(message, True)
                 return
-            self.events.update_status.emit(
-                f"Downloading version {update.version} securely…", False
-            )
+            self.events.update_status.emit(f"Downloading version {update.version} securely…", False)
             downloaded = download_update(update, data_directory() / "updates")
             self.events.update_ready.emit(downloaded)
         except Exception as exc:

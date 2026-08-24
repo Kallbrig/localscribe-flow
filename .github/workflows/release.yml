@@ -27,6 +27,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[app,dev]" cyclonedx-bom
           python -m pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+      - name: Download, initialize, and run both real model engines
+        timeout-minutes: 20
+        run: python scripts/test_real_model.py
       - run: ./scripts/build.ps1 -SkipInstall
         shell: pwsh
       - name: Build installer
