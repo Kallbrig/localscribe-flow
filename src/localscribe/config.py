@@ -22,6 +22,7 @@ class AppConfig:
     paste_after_transcription: bool = True
     keep_recordings: bool = False
     auto_check_updates: bool = True
+    save_history: bool = True
 
 
 class ConfigStore:

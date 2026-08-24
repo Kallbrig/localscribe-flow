@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QApplication
 
 from localscribe import ui
 from localscribe.config import ConfigStore
-from localscribe.domain import CleanupMode, HardwareProfile
+from localscribe.domain import CleanupMode, HardwareProfile, Transcript
 from localscribe.pipeline import DictationPipeline
 from localscribe.ui import MainWindow
 
@@ -21,6 +21,7 @@ class StubCleaner:
 
 def make_window(monkeypatch: object, tmp_path: Path) -> MainWindow:
     monkeypatch.setenv("LOCALSCRIBE_DIAGNOSTIC", "1")  # type: ignore[attr-defined]
+    monkeypatch.setenv("LOCALSCRIBE_DATA_DIR", str(tmp_path / "data"))  # type: ignore[attr-defined]
     monkeypatch.setattr(MainWindow, "_build_tray", lambda self: None)  # type: ignore[attr-defined]
     monkeypatch.setattr(MainWindow, "_register_hotkey", lambda self: None)  # type: ignore[attr-defined]
     app = QApplication.instance() or QApplication([])
@@ -93,3 +94,25 @@ def test_corrupt_speech_model_is_force_downloaded_and_retried(
     assert forced == [False, True]
     assert transcriber_attempts == 2
     assert window.pipeline is not None
+
+
+def test_history_tab_renders_and_searches_saved_transcripts(
+    monkeypatch: object, tmp_path: Path
+) -> None:
+    window = make_window(monkeypatch, tmp_path)
+    window.history.add(
+        Transcript(
+            "raw kentucky note",
+            "Clean Kentucky note.",
+            "en",
+            1.5,
+            CleanupMode.STANDARD,
+        )
+    )
+
+    window.history_search.setText("Kentucky")
+    window._refresh_history()
+
+    rendered = window.history_results.toPlainText()
+    assert "Clean Kentucky note." in rendered
+    assert "Raw: raw kentucky note" in rendered

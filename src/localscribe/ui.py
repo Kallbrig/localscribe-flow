@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import sqlite3
 import threading
 import time
 
@@ -31,7 +32,8 @@ from . import __version__
 from .audio import AudioRecorder
 from .cleanup import AutoCleaner
 from .config import ConfigStore, data_directory
-from .domain import CleanupMode, HardwareProfile
+from .domain import CleanupMode, HardwareProfile, Transcript
+from .history import TranscriptHistory
 from .models import ensure_cleanup_model, prepare_whisper_model
 from .pipeline import DictationPipeline
 from .platforms import DesktopIntegration
@@ -72,6 +74,7 @@ class MainWindow(QMainWindow):
         self.store, self.config, self.hardware = store, store.load(), hardware
         self.recorder = AudioRecorder()
         self.integration = DesktopIntegration()
+        self.history = TranscriptHistory(data_directory() / "history.sqlite3")
         self.pipeline: DictationPipeline | None = None
         self.events = Events()
         self.events.toggle.connect(self.toggle_recording)
@@ -144,6 +147,25 @@ class MainWindow(QMainWindow):
         )
         home_layout.addWidget(self.copy)
         tabs.addTab(home, "Dictate")
+        history = QWidget()
+        history_layout = QVBoxLayout(history)
+        history_controls = QHBoxLayout()
+        self.history_search = QLineEdit()
+        self.history_search.setPlaceholderText("Search raw and cleaned transcript text…")
+        self.history_search.textChanged.connect(self._refresh_history)
+        history_controls.addWidget(self.history_search)
+        refresh_history = QPushButton("Refresh")
+        refresh_history.clicked.connect(self._refresh_history)
+        history_controls.addWidget(refresh_history)
+        clear_history = QPushButton("Clear history")
+        clear_history.clicked.connect(self._clear_history)
+        history_controls.addWidget(clear_history)
+        history_layout.addLayout(history_controls)
+        self.history_results = QTextEdit()
+        self.history_results.setReadOnly(True)
+        self.history_results.setPlaceholderText("Saved transcripts will appear here.")
+        history_layout.addWidget(self.history_results)
+        tabs.addTab(history, "History")
         settings = QWidget()
         form = QFormLayout(settings)
         self.hotkey = QLineEdit(self.config.hotkey)
@@ -164,6 +186,10 @@ class MainWindow(QMainWindow):
         self.auto_updates.setChecked(self.config.auto_check_updates)
         self.auto_updates.toggled.connect(self._save_settings)
         form.addRow("Updates", self.auto_updates)
+        self.save_history = QCheckBox("Save transcripts locally (audio is never saved here)")
+        self.save_history.setChecked(self.config.save_history)
+        self.save_history.toggled.connect(self._save_settings)
+        form.addRow("History", self.save_history)
         self.check_updates = QPushButton("Check for updates now")
         self.check_updates.clicked.connect(lambda: self._start_update_check(manual=True))
         form.addRow("", self.check_updates)
@@ -177,6 +203,7 @@ class MainWindow(QMainWindow):
         )
         form.addRow("Detected hardware", QLabel(hardware_text))
         tabs.addTab(settings, "Settings")
+        self._refresh_history()
         layout.addWidget(tabs)
         self.setCentralWidget(root)
         self.setStyleSheet(
@@ -292,8 +319,6 @@ class MainWindow(QMainWindow):
             self.events.failed.emit(f"Transcription failed: {exc}")
 
     def _on_complete(self, result: object) -> None:
-        from .domain import Transcript
-
         assert isinstance(result, Transcript)
         self.output.setPlainText(result.cleaned)
         self.record.setEnabled(True)
@@ -303,6 +328,10 @@ class MainWindow(QMainWindow):
             f"{result.mode.value}"
         )
         QApplication.clipboard().setText(result.cleaned)
+        if self.config.save_history:
+            with contextlib.suppress(OSError, sqlite3.Error):
+                self.history.add(result)
+                self._refresh_history()
         if self.config.paste_after_transcription:
             with contextlib.suppress(Exception):
                 self.integration.paste_text(result.cleaned)
@@ -423,6 +452,33 @@ class MainWindow(QMainWindow):
             else:
                 self._on_failed("The update installer could not be opened.")
 
+    def _refresh_history(self, *_args: object) -> None:
+        entries = self.history.search(self.history_search.text())
+        blocks: list[str] = []
+        for entry in entries:
+            timestamp = entry.created_at.replace("T", " ").replace("+00:00", " UTC")
+            header = (
+                f"{timestamp} · {entry.mode.value.title()} · {entry.language} · "
+                f"{entry.duration_seconds:.1f}s"
+            )
+            block = f"{header}\n{entry.cleaned}"
+            if entry.raw.strip() != entry.cleaned.strip():
+                block += f"\nRaw: {entry.raw}"
+            blocks.append(block)
+        self.history_results.setPlainText("\n\n────────────────────\n\n".join(blocks))
+
+    def _clear_history(self) -> None:
+        answer = QMessageBox.question(
+            self,
+            "Clear transcript history",
+            "Permanently delete all locally saved transcript history?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer == QMessageBox.Yes:
+            self.history.clear()
+            self._refresh_history()
+
     def _save_settings(self) -> None:
         self.config.mode = CleanupMode(self.mode.currentText().lower())
         self.config.whisper_model = self.model.text().strip() or "small.en"
@@ -431,6 +487,7 @@ class MainWindow(QMainWindow):
             w.strip() for w in self.words.toPlainText().splitlines() if w.strip()
         ]
         self.config.auto_check_updates = self.auto_updates.isChecked()
+        self.config.save_history = self.save_history.isChecked()
         self.store.save(self.config)
 
     def _hotkey_changed(self) -> None:

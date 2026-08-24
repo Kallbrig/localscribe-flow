@@ -2,6 +2,15 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.7] - 2026-08-23
+
+### Added
+
+- Add a local SQLite transcript archive containing timestamps, raw/cleaned text, mode, language,
+  and duration without retaining audio.
+- Add a History tab with live full-text search, refresh, raw-text comparison, and confirmed clear.
+- Add a privacy setting, enabled by default, to disable saving future transcript history.
+
 ## [0.1.6] - 2026-08-23
 
 ### Fixed
