@@ -11,6 +11,12 @@ if (-not $SkipInstall) {
     & $PythonExecutable -m pip install ".[app,dev]"
     & $PythonExecutable -m pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 }
+& $PythonExecutable -m ruff check .
+if ($LASTEXITCODE -ne 0) { throw "Lint failed" }
+& $PythonExecutable -m ruff format --check .
+if ($LASTEXITCODE -ne 0) { throw "Format check failed" }
+& $PythonExecutable -m mypy src
+if ($LASTEXITCODE -ne 0) { throw "Type check failed" }
 & $PythonExecutable -m pytest
 if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
 & $PythonExecutable -m PyInstaller packaging/LocalScribeFlow.spec --noconfirm --clean

@@ -9,7 +9,7 @@ class WhisperTranscriber:
     def __init__(
         self, model_name: str, hardware: HardwareProfile, language: str | None = None
     ) -> None:
-        from faster_whisper import WhisperModel  # type: ignore[import-not-found]
+        from faster_whisper import WhisperModel
 
         self.language = language
         self._model = WhisperModel(

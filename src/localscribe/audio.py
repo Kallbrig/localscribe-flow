@@ -19,7 +19,7 @@ class AudioRecorder:
         return self._stream is not None
 
     def start(self) -> None:
-        import sounddevice as sd  # type: ignore[import-not-found]
+        import sounddevice as sd
 
         if self.recording:
             return

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "localscribe-flow"
-version = "0.1.4"
+version = "0.1.5"
 description = "Private, local-first voice dictation and cleanup for Windows"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -82,5 +82,5 @@ module = ["numpy", "numpy.*"]
 follow_imports = "skip"
 
 [[tool.mypy.overrides]]
-module = ["ctranslate2", "ctranslate2.*", "huggingface_hub", "huggingface_hub.*", "llama_cpp", "llama_cpp.*"]
+module = ["ctranslate2", "ctranslate2.*", "faster_whisper", "faster_whisper.*", "huggingface_hub", "huggingface_hub.*", "llama_cpp", "llama_cpp.*", "sounddevice", "sounddevice.*"]
 ignore_missing_imports = true

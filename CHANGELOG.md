@@ -2,6 +2,15 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.5] - 2026-08-23
+
+### Fixed
+
+- Make installed untyped audio/model libraries behave consistently in the Python 3.11/3.12 mypy
+  matrix.
+- Run lint, formatting, and strict typing inside the release build itself so a tag cannot publish
+  when the separate CI quality matrix would fail.
+
 ## [0.1.4] - 2026-08-23
 
 ### Fixed
