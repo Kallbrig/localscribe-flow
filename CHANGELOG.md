@@ -2,6 +2,15 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and semantic versioning.
 
+## [0.1.3] - 2026-08-23
+
+### Fixed
+
+- Show determinate download progress and indeterminate model-loading progress during setup.
+- Store Whisper models in app-owned storage and automatically force a clean download when model
+  loading detects an incomplete or corrupt cache.
+- Keep Retry useful after a failed first-run model download.
+
 ## [0.1.2] - 2026-08-23
 
 ### Fixed

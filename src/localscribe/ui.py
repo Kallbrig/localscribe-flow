@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QProgressBar,
     QPushButton,
     QSystemTrayIcon,
     QTabWidget,
@@ -31,7 +32,7 @@ from .audio import AudioRecorder
 from .cleanup import AutoCleaner
 from .config import ConfigStore, data_directory
 from .domain import CleanupMode, HardwareProfile
-from .models import ensure_cleanup_model
+from .models import ensure_cleanup_model, prepare_whisper_model
 from .pipeline import DictationPipeline
 from .platforms import DesktopIntegration
 from .transcription import WhisperTranscriber
@@ -44,6 +45,8 @@ class Events(QObject):
     failed = Signal(str)
     status = Signal(str)
     models_ready = Signal(object, str)
+    models_complete = Signal()
+    model_progress = Signal(str, int, int)
     startup_failed = Signal(str)
     update_ready = Signal(object)
     update_status = Signal(str, bool)
@@ -76,6 +79,8 @@ class MainWindow(QMainWindow):
         self.events.failed.connect(self._on_failed)
         self.events.status.connect(self._set_status)
         self.events.models_ready.connect(self._on_models_ready)
+        self.events.models_complete.connect(self._on_models_complete)
+        self.events.model_progress.connect(self._on_model_progress)
         self.events.startup_failed.connect(self._on_startup_failed)
         self.events.update_ready.connect(self._on_update_ready)
         self.events.update_status.connect(self._set_update_status)
@@ -107,6 +112,10 @@ class MainWindow(QMainWindow):
         self.status = QLabel("Starting local engines…")
         self.status.setStyleSheet("padding: 10px; background: #1f2937; border-radius: 6px")
         home_layout.addWidget(self.status)
+        self.model_progress = QProgressBar()
+        self.model_progress.setRange(0, 0)
+        self.model_progress.setFormat("Preparing local models…")
+        home_layout.addWidget(self.model_progress)
         row = QHBoxLayout()
         self.record = QPushButton("Start recording")
         self.record.setMinimumHeight(55)
@@ -198,16 +207,28 @@ class MainWindow(QMainWindow):
             self.events.failed.emit(f"Could not register hotkey: {exc}")
 
     def _load_models(self) -> None:
+        def progress(stage: str, current: int, total: int) -> None:
+            self.events.model_progress.emit(stage, current, total)
+
         try:
             self.events.status.emit(
                 "Preparing the private speech model… First launch may take several minutes "
                 "while it downloads once."
             )
-            transcriber = WhisperTranscriber(
-                self.config.whisper_model,
-                self.hardware,
-                self.config.language,
-            )
+            model_path = prepare_whisper_model(self.config.whisper_model, progress)
+            self.events.model_progress.emit("Loading speech model into memory", 0, 0)
+            try:
+                transcriber = WhisperTranscriber(
+                    str(model_path), self.hardware, self.config.language
+                )
+            except Exception:
+                self.events.status.emit("Repairing an incomplete speech model download…")
+                model_path = prepare_whisper_model(
+                    self.config.whisper_model, progress, force_download=True
+                )
+                transcriber = WhisperTranscriber(
+                    str(model_path), self.hardware, self.config.language
+                )
         except Exception as exc:  # model libraries surface backend-specific exceptions
             self.events.startup_failed.emit(f"Speech model setup failed: {exc}")
             return
@@ -220,7 +241,9 @@ class MainWindow(QMainWindow):
         )
 
         try:
-            llm_path = self.config.llm_model_path or str(ensure_cleanup_model(self.hardware))
+            llm_path = self.config.llm_model_path or str(
+                ensure_cleanup_model(self.hardware, progress)
+            )
             cleaner = AutoCleaner(
                 llm_path, self.hardware.logical_cores - 1, self.hardware.device == "cuda"
             )
@@ -230,10 +253,12 @@ class MainWindow(QMainWindow):
                 f"cleanup: {cleaner.backend} · "
                 f"hotkey: {self.config.hotkey}",
             )
+            self.events.models_complete.emit()
         except Exception as exc:  # cleanup is optional; dictation remains available
             self.events.status.emit(
                 f"Ready · basic local cleanup active · enhanced cleanup setup failed: {exc}"
             )
+            self.events.models_complete.emit()
 
     def toggle_recording(self) -> None:
         if self.recorder.recording:
@@ -304,13 +329,34 @@ class MainWindow(QMainWindow):
         self.record.setEnabled(False)
         self.record.setText("Speech model unavailable")
         self.retry.show()
+        self.model_progress.hide()
         self.status.setText(message)
 
     def _retry_model_setup(self) -> None:
         self.retry.hide()
         self.record.setEnabled(False)
         self.record.setText("Preparing speech model…")
+        self.model_progress.setRange(0, 0)
+        self.model_progress.setFormat("Preparing local models…")
+        self.model_progress.show()
         threading.Thread(target=self._load_models, daemon=True).start()
+
+    def _on_model_progress(self, stage: str, current: int, total: int) -> None:
+        self.model_progress.show()
+        if total > 0:
+            percentage = min(100, round(current * 100 / total))
+            self.model_progress.setRange(0, 100)
+            self.model_progress.setValue(percentage)
+            self.model_progress.setFormat(f"{stage} · %p%")
+        else:
+            self.model_progress.setRange(0, 0)
+            self.model_progress.setFormat(f"{stage}…")
+
+    def _on_models_complete(self) -> None:
+        self.model_progress.setRange(0, 100)
+        self.model_progress.setValue(100)
+        self.model_progress.setFormat("Local models ready · 100%")
+        QTimer.singleShot(1200, self.model_progress.hide)
 
     def _auto_check_for_updates(self) -> None:
         if self.config.auto_check_updates:
